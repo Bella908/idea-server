@@ -33,19 +33,35 @@ async function run() {
                 const result = await cursor.toArray();
                 console.log(result);
                 res.json(result);
-              } catch (error) {
+            } catch (error) {
                 console.error("Error fetching classes:", error);
                 res.status(500).json({ error: "Internal Server Error" });
             }
         });
-        
-        
+
+
         app.get('/class/:id', async (req, res) => {
-           const id = req.params.id
-           const query = {_id : new ObjectId(id)}
-           const result = await classCollection.findOne(query)
-           res.send(result)
+            const id = req.params.id
+            const query = { _id: new ObjectId(id) }
+            const result = await classCollection.findOne(query)
+            res.send(result)
         });
+
+
+      // Route to add a new class
+    app.post('/classes', async (req, res) => {
+        try {
+            const newClass = req.body;
+            console.log(newClass);
+            const result = await classCollection.insertOne(newClass);
+            res.status(201).send(result);
+        } catch (error) {
+            console.error('Error adding class:', error);
+            res.status(500).send({ error: 'An error occurred while adding the class' });
+        }
+    });
+
+
 
         app.get('/', (req, res) => {
             res.send('Hello from server');
