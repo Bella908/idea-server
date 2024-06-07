@@ -61,7 +61,20 @@ async function run() {
         }
     });
 
+    // get the list
 
+    app.get('/myclass/:email', async (req, res) => {
+        const email = req.params.email;
+      
+        try {
+          const query = { email: email };
+          const result = await classCollection.find(query).toArray();
+          res.send(result);
+        } catch (error) {
+          console.error('Error fetching classes:', error);
+          res.status(500).send({ message: 'Failed to fetch classes' });
+        }
+      });
 
         app.get('/', (req, res) => {
             res.send('Hello from server');
