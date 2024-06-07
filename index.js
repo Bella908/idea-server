@@ -27,6 +27,7 @@ async function run() {
         const db = client.db('idea');
         const classCollection = db.collection('class');
         const usersCollection = db.collection('users');
+        const teacherCollection = db.collection('teacherRequest');
 
         app.get('/allclasses', async (req, res) => {
             try {
@@ -61,6 +62,20 @@ async function run() {
             res.status(500).send({ error: 'An error occurred while adding the class' });
         }
     });
+   
+//    teach On
+   
+    app.post('/teachOn', async (req, res) => {
+        try {
+            const teacher = req.body;
+            console.log(teacher);
+            const result = await teacherCollection.insertOne(teacher);
+            res.status(201).send(result);
+        } catch (error) {
+            console.error('Error adding class:', error);
+            res.status(500).send({ error: 'An error occurred while adding the class' });
+        }
+    });
 
     // get the list
 
@@ -87,38 +102,45 @@ async function run() {
 
 
     //   save a user
-    app.put('/user' , async (req , res) =>{
-        const user  = req.body
-
-
-        const isExist = await usersCollection.findOne({ email: user?.email })
-        if (isExist) return res.send(isExist)
-            
-        //     {
-        //     if (user.status === 'Requested') {
-        //       // if existing user try to change his role
-        //       const result = await usersCollection.updateOne(query, {
-        //         $set: { status: user?.status },
-        //       })
-        //       return res.send(result)
-        //     } else {
-        //       // if existing user login again
-        //       return res.send(isExist)
-        //     }
-        //   }
-
-       const options = { upsert : true}
-        const query ={ email: user?.email }
-        const updateDoc ={
-            $set: { 
-                ...user,
-                timestamp: Date.now(),
-            },
+   
+app.put('/user', async (req, res) => {
+    const user = req.body;
+  
+    try {
+      const query = { email: user?.email };
+  
+      // Check if the user already exists
+      const isExist = await usersCollection.findOne(query);
+  
+      if (isExist) {
+        // If the user is trying to change their status to "Requested"
+        if (user.status === 'Requested') {
+          const result = await usersCollection.updateOne(query, {
+            $set: { status: user?.status }
+          });
+          return res.send(result);
+        } else {
+          // If the user already exists and is logging in again
+          return res.send(isExist);
         }
-
-        const result = await usersCollection.updateOne(query , updateDoc , options)
-        res.send(result)
-    })
+      }
+  
+      // If the user doesn't exist, create a new user with upsert
+      const options = { upsert: true };
+      const updateDoc = {
+        $set: {
+          ...user,
+          timestamp: Date.now(),
+        },
+      };
+  
+      const result = await usersCollection.updateOne(query, updateDoc, options);
+      res.send(result);
+    } catch (error) {
+      console.error('Error updating user:', error);
+      res.status(500).send('Internal Server Error');
+    }
+  });
   
 
     // get the user
