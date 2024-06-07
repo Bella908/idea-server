@@ -26,6 +26,7 @@ async function run() {
 
         const db = client.db('idea');
         const classCollection = db.collection('class');
+        const usersCollection = db.collection('users');
 
         app.get('/allclasses', async (req, res) => {
             try {
@@ -75,6 +76,57 @@ async function run() {
           res.status(500).send({ message: 'Failed to fetch classes' });
         }
       });
+
+
+    //   deleat a list item
+    app.delete("/myclass/delete/:_id", async (req, res) => {
+        const result = await classCollection.deleteOne({ _id: new ObjectId(req.params._id) });
+  
+        res.send(result)
+      })
+
+
+    //   save a user
+    app.put('/user' , async (req , res) =>{
+        const user  = req.body
+
+
+        const isExist = await usersCollection.findOne({ email: user?.email })
+        if (isExist) return res.send(isExist)
+            
+        //     {
+        //     if (user.status === 'Requested') {
+        //       // if existing user try to change his role
+        //       const result = await usersCollection.updateOne(query, {
+        //         $set: { status: user?.status },
+        //       })
+        //       return res.send(result)
+        //     } else {
+        //       // if existing user login again
+        //       return res.send(isExist)
+        //     }
+        //   }
+
+       const options = { upsert : true}
+        const query ={ email: user?.email }
+        const updateDoc ={
+            $set: { 
+                ...user,
+                timestamp: Date.now(),
+            },
+        }
+
+        const result = await usersCollection.updateOne(query , updateDoc , options)
+        res.send(result)
+    })
+  
+
+    // get the user
+
+    app.get('/users', async (req, res) => {
+        const result = await usersCollection.find().toArray()
+        res.send(result)
+      })
 
         app.get('/', (req, res) => {
             res.send('Hello from server');
