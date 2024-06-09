@@ -95,31 +95,27 @@ async function run() {
   
 // change the status
 app.patch('/teachOn/:id', async (req, res) => {
-  try {
-    const id = req.params.id;
-    const user = req.body;
-
-    // Update the teacher status
-    const query = { _id: new ObjectId(id) };
-    const updateDoc = {
-      $set: { status: user.status },
-    };
-    const result = await teacherCollection.updateOne(query, updateDoc);
-
-    // Update the user role to 'teacher' in userCollection
-    if (user.status === 'Accepted') {
-      const userQuery = { _id: new ObjectId(id) };
-      const userUpdateDoc = {
-        $set: { role: 'teacher' },
-      };
-      await usersCollection.updateOne(userQuery, userUpdateDoc);
-    }
-
-    res.send(result);
-  } catch (error) {
-    res.status(500).send({ message: 'Failed to update user', error });
+  const id = req.params.id;
+  const user = req.body
+  const query = { _id: new ObjectId(id) };
+  const updateDoc = {
+    $set: { ...user },
   }
-});
+  const result = await teacherCollection.updateOne(query, updateDoc)
+  res.send(result)
+})
+
+app.patch('/allclasses/:id', async (req, res) => {
+  const id = req.params.id;
+  const user = req.body
+  const query = { _id: new ObjectId(id) };
+  const updateDoc = {
+    $set: { ...user },
+  }
+  const result = await classCollection.updateOne(query, updateDoc)
+  res.send(result)
+})
+
 
 
 
