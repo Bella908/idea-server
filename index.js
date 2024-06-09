@@ -77,6 +77,58 @@ async function run() {
         }
     });
 
+
+    app.get('/teachOn', async (req, res) => {
+      try {
+          const cursor = teacherCollection.find();
+          const result = await cursor.toArray();
+          console.log(result);
+          res.json(result);
+      } catch (error) {
+          console.error("Error fetching teacher requests:", error);
+          res.status(500).json({ error: "Internal Server Error" });
+      }
+  });
+
+
+ 
+  
+// change the status
+app.patch('/teachOn/:id', async (req, res) => {
+  try {
+    const id = req.params.id;
+    const user = req.body;
+
+    // Update the teacher status
+    const query = { _id: new ObjectId(id) };
+    const updateDoc = {
+      $set: { status: user.status },
+    };
+    const result = await teacherCollection.updateOne(query, updateDoc);
+
+    // Update the user role to 'teacher' in userCollection
+    if (user.status === 'Accepted') {
+      const userQuery = { _id: new ObjectId(id) };
+      const userUpdateDoc = {
+        $set: { role: 'teacher' },
+      };
+      await usersCollection.updateOne(userQuery, userUpdateDoc);
+    }
+
+    res.send(result);
+  } catch (error) {
+    res.status(500).send({ message: 'Failed to update user', error });
+  }
+});
+
+
+
+
+
+
+
+
+
     // get the list
 
     app.get('/myclass/:email', async (req, res) => {
@@ -143,12 +195,32 @@ app.put('/user', async (req, res) => {
   });
   
 
+//    // get a user info by email from db
+    app.get('/user/:email', async (req, res) => {
+        const email = req.params.email
+        const result = await usersCollection.findOne({ email })
+        res.send(result)
+      })
     // get the user
 
     app.get('/users', async (req, res) => {
         const result = await usersCollection.find().toArray()
         res.send(result)
       })
+
+
+// update user role
+app.patch('/users/update/:email', async (req, res) => {
+  const email = req.params.email
+  const user = req.body
+  const query = { email }
+  const updateDoc = {
+    $set: { ...user, timestamp: Date.now() },
+  }
+  const result = await usersCollection.updateOne(query, updateDoc)
+  res.send(result)
+})
+
 
         app.get('/', (req, res) => {
             res.send('Hello from server');
