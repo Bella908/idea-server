@@ -28,6 +28,7 @@ async function run() {
         const classCollection = db.collection('class');
         const usersCollection = db.collection('users');
         const teacherCollection = db.collection('teacherRequest');
+        const assignmentCollection = db.collection('assignment');
 
         app.get('/allclasses', async (req, res) => {
             try {
@@ -216,6 +217,22 @@ app.patch('/users/update/:email', async (req, res) => {
   const result = await usersCollection.updateOne(query, updateDoc)
   res.send(result)
 })
+
+// save assigment
+app.post('/assignment/:id', async (req, res) => {
+  try {
+      const assignment = req.body;
+      console.log(assignment);
+
+      // Assuming you have a MongoDB collection named 'assignments'
+      const result = await assignmentCollection.insertOne(assignment);
+
+      res.status(201).send(result);
+  } catch (error) {
+      console.error('Error adding assignment:', error);
+      res.status(500).send({ error: 'An error occurred while adding the assignment' });
+  }
+});
 
 
         app.get('/', (req, res) => {
