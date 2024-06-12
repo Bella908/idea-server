@@ -13,7 +13,7 @@ const app = express();
 app.use(cors());
 app.use(express.json());
 
-const uri = "mongodb+srv://ideaEducatiobHub:V8CCnG6XQwsdxz39@cluster0.ld1lprp.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"; // Update with your MongoDB URI
+const uri = "mongodb+srv://DB_USERS:DB_PASSWORD.ld1lprp.mongodb.net/?retryWrites=true&w=majority&appName=Cluster0"; // Update with your MongoDB URI
 const client = new MongoClient(uri, {
     serverApi: {
         version: ServerApiVersion.v1,
