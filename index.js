@@ -2,6 +2,8 @@ const express = require('express');
 const cors = require('cors');
 const stripe = require("stripe")('sk_test_51PPrgzRtjC8EFUM0TchOH5HbQQAv8ugf5OouxAMaT9WakdvA4qJqUfC77sNWoTyArQmN1surEK4DMdVfSlKmEygw00qcHmQxm1')
 require('dotenv').config();
+const jwt = require('jsonwebtoken');
+
 const { MongoClient, ServerApiVersion, ObjectId } = require('mongodb');
 
 const port = process.env.PORT || 5000;
@@ -30,7 +32,22 @@ async function run() {
         const usersCollection = db.collection('users');
         const teacherCollection = db.collection('teacherRequest');
         const assignmentCollection = db.collection('assignment');
-        const userAddClass = db.collection('userAddClass')
+        const userAddClass = db.collection('userAddClass');
+        const feedbackCollection = db.collection('feedback');
+
+
+// JWT RELATED
+app.post('/jwt',async(req , res) =>{
+    const user =req.body;
+    const token = jwt.sign(user, process.env.ACCESS_TOKEN_SECRET,{
+        expiresIn: '1hr'
+    });
+    res.send({token});
+})
+
+
+
+
 
         app.get('/allclasses', async (req, res) => {
             try {
@@ -89,6 +106,35 @@ async function run() {
             }
         });
 
+
+        app.patch('/teachOn/:id', async (req, res) => {
+            const id = req.params.id;
+            const { status } = req.body; // Assume we are passing status in the request body
+            const query = { _id: new ObjectId(id) };
+            const updateDoc = {
+                $set: { status },
+            };
+            const result = await teacherCollection.updateOne(query, updateDoc);
+            res.send(result);
+        });
+
+        
+        app.get('/user/status', async (req, res) => {
+            const email = req.query.email;
+            try {
+                const result = await teacherCollection.findOne({ email });
+                res.send(result);
+            } catch (error) {
+                console.error('Error fetching user status:', error);
+                res.status(500).send('Internal Server Error');
+            }
+        });
+        
+
+
+
+
+
         // Change the status
         app.patch('/teachOn/:id', async (req, res) => {
             const id = req.params.id;
@@ -113,7 +159,7 @@ async function run() {
         });
 
         // Create payment intent and save class information after successful payment
-   
+
         // Get the list
         app.get('/myclass/:email', async (req, res) => {
             const email = req.params.email;
@@ -200,6 +246,22 @@ async function run() {
             res.send(result);
         });
 
+        app.patch('/users/:id', async (req, res) => {
+            try {
+                const id = req.params.id;
+                const user = req.body;
+                const query = { _id: new ObjectId(id) };
+                const updateDoc = {
+                    $set: { ...user },
+                };
+                const result = await usersCollection.updateOne(query, updateDoc);
+                res.send(result);
+            } catch (error) {
+                console.error('Error updating user:', error);
+                res.status(500).send({ error: 'An error occurred while updating the user' });
+            }
+        });
+        
         // Save assignment
         app.post('/assignment/:id', async (req, res) => {
             try {
@@ -214,32 +276,41 @@ async function run() {
                 res.status(500).send({ error: 'An error occurred while adding the assignment' });
             }
         });
-        
+        // get the assigment
+        app.get('/assignment', async (req, res) => {
+            try {
+                const cursor =assignmentCollection.find();
+                const result = await cursor.toArray();
+                console.log(result);
+                res.json(result);
+            } catch (error) {
+                console.error("Error fetching teacher requests:", error);
+                res.status(500).json({ error: "Internal Server Error" });
+            }
+        });
 
-        // payment
+        app.get('/assignment/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await classCollection.findOne(query);
+            res.send(result);
+        });
 
-        app.post('/payment', async (req, res) => {
-          try {
-              const payment = req.body;
-              console.log(payment);
-              const result = await userAddClass.insertOne(payment);
-              res.status(201).send(result);
-          } catch (error) {
-              console.error('Error adding class:', error);
-              res.status(500).send({ error: 'An error occurred while adding the class' });
-          }
-      });
 
-// get the enroll info
-app.get('/enrollClass', async (req, res) => {
+// update class
+app.patch('/update/:id', async (req, res) => {
+    const id = req.params.id;
+    const { title, price, shortDescription, image } = req.body; // Get updated fields from request body
+
     try {
-        const cursor = userAddClass.find();
-        const result = await cursor.toArray();
-        console.log(result);
-        res.json(result);
+        const query = { _id: new ObjectId(id) };
+        const updateDoc = {
+            $set: { title, price, shortDescription, image },
+        };
+        const result = await classCollection.updateOne(query, updateDoc);
+        res.send(result);
     } catch (error) {
-        console.error("Error fetching teacher requests:", error);
-        res.status(500).json({ error: "Internal Server Error" });
+        res.status(500).json({ message: 'Server error' });
     }
 });
 
@@ -247,6 +318,116 @@ app.get('/enrollClass', async (req, res) => {
 
 
 
+
+
+        // payment
+
+        app.post('/payment', async (req, res) => {
+            try {
+                const payment = req.body;
+                console.log(payment);
+                const result = await userAddClass.insertOne(payment);
+                res.status(201).send(result);
+            } catch (error) {
+                console.error('Error adding class:', error);
+                res.status(500).send({ error: 'An error occurred while adding the class' });
+            }
+        });
+
+        // get the enroll info
+        app.get('/enrollClass', async (req, res) => {
+            try {
+                const cursor = userAddClass.find();
+                const result = await cursor.toArray();
+                console.log(result);
+                res.json(result);
+            } catch (error) {
+                console.error("Error fetching teacher requests:", error);
+                res.status(500).json({ error: "Internal Server Error" });
+            }
+        });
+
+        app.get('/enrollClass/:classId', async (req, res) => {
+            try {
+                const cursor = assignmentCollection.find({ classId: req.params.classId });
+                const result = await cursor.toArray();
+                res.send(result);
+            } catch (error) {
+                console.error("Error fetching assignments:", error);
+                res.status(500).send("Internal Server Error");
+            }
+        });
+        
+        // feedback
+        app.post('/feedback', async (req, res) => {
+            try {
+                const feedback = req.body;
+                console.log(feedback);
+                const result = await feedbackCollection.insertOne(feedback);
+                res.status(201).send(result);
+            } catch (error) {
+                console.error('Error adding class:', error);
+                res.status(500).send({ error: 'An error occurred while adding the class' });
+            }
+        });
+
+        app.get('/feedback', async (req, res) => {
+            try {
+                const cursor = feedbackCollection.find();
+                const result = await cursor.toArray();
+                console.log(result);
+                res.json(result);
+            } catch (error) {
+                console.error("Error fetching teacher requests:", error);
+                res.status(500).json({ error: "Internal Server Error" });
+            }
+        });
+       
+        app.get('/feedback/:id', async (req, res) => {
+            const id = req.params.id;
+            const query = { _id: new ObjectId(id) };
+            const result = await feedbackCollection.findOne(query);
+            res.send(result);
+        });
+
+        app.get('/admin-stat', async (req, res) => {
+           
+      
+            const totalUsers = await usersCollection.countDocuments()
+            const totalClasses = await classCollection.countDocuments()
+            const totalAddClass = await userAddClass.countDocuments()
+            
+            res.send({
+              totalUsers,
+              totalClasses,
+              totalAddClass
+              
+            })
+          })
+      
+
+          app.get('/classes/:id/enrollments', async (req, res) => {
+            try {
+                const classId = req.params.id;
+                const totalEnrollments = await enrollmentCollection.countDocuments({ classId: new ObjectId(classId) });
+                res.json({ totalEnrollments });
+            } catch (error) {
+                console.error('Error fetching enrollments:', error);
+                res.status(500).send({ error: 'An error occurred while fetching enrollments' });
+            }
+        });
+
+        app.get('/teachers/:id/assignments', async (req, res) => {
+            try {
+                const teacherId = req.params.id;
+                const totalAssignments = await assignmentCollection.countDocuments({ teacherId: new ObjectId(teacherId) });
+                res.json({ totalAssignments });
+            } catch (error) {
+                console.error('Error fetching assignments:', error);
+                res.status(500).send({ error: 'An error occurred while fetching assignments' });
+            }
+        });
+        
 
 
 
